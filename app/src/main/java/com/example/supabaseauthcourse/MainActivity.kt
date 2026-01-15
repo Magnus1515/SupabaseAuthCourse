@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             SupabaseAuthCourseTheme {
                 RegisterScreen()
+                Log.d("CLIENT_ID", BuildConfig.WEB_CLIENT_ID)
             }
         }
     }
@@ -408,7 +409,7 @@ class AuthManager(
         val hashedOnce = createNonce()
 
         val googleIdOption = GetGoogleIdOption.Builder()
-            .setServerClientId("g9capsatioes64urhvrdjh0fdijcuvqa.apps.googleusercontent.com")
+            .setServerClientId(BuildConfig.WEB_CLIENT_ID)
             .setNonce(hashedOnce)
             .setAutoSelectEnabled(false)
             .setFilterByAuthorizedAccounts(false)
