@@ -47,6 +47,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import com.example.supabaseauthcourse.ui.theme.SupabaseAuthCourseTheme
@@ -69,25 +71,65 @@ import kotlinx.coroutines.flow.onEach
 import java.security.MessageDigest
 import java.util.UUID
 
+enum class AuthScreen {
+    Register,
+    Login,
+    Home
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             SupabaseAuthCourseTheme {
-                RegisterScreen()
+                var currentScreen by remember {
+                    mutableStateOf(AuthScreen.Register)
+                }
+                
+                Crossfade(
+                    targetState = currentScreen,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "screen_transition"
+                ) { screen ->
+                    when (screen) {
+                        AuthScreen.Register -> RegisterScreen(
+                            onNavigateToLogin = {
+                                currentScreen = AuthScreen.Login
+                            },
+                            onNavigateToHome = {
+                                currentScreen = AuthScreen.Home
+                            }
+                        )
+                        AuthScreen.Login -> LoginScreen(
+                            onNavigateToRegister = {
+                                currentScreen = AuthScreen.Register
+                            },
+                            onNavigateToHome = {
+                                currentScreen = AuthScreen.Home
+                            }
+                        )
+                        AuthScreen.Home -> HomeScreen()
+                    }
+                }
                 Log.d("CLIENT_ID", BuildConfig.WEB_CLIENT_ID)
             }
         }
     }
 }
 @Composable
-fun RegisterScreen(){
+fun RegisterScreen(
+    onNavigateToLogin: () -> Unit = {},
+    onNavigateToHome: () -> Unit = {}
+){
 
     var emailValue by remember {
         mutableStateOf("")
     }
     var passwordValue by remember {
+        mutableStateOf("")
+    }
+    var confirmPasswordValue by remember {
         mutableStateOf("")
     }
 
@@ -123,8 +165,285 @@ fun RegisterScreen(){
                         .onEach { result ->
                             if (result is AuthResponse.Success) {
                                 Log.d("auth", "Google Success")
+                                onNavigateToHome()
                             } else {
                                 Log.e("auth", "Google Failed")
+                            }
+                        }
+                        .launchIn(coroutineScope)
+                }
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 30.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(1.dp)
+                        .background(Color.White.copy(alpha = 0.2f))
+                )
+
+                Text(
+                    text = "Or",
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 10.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(1.dp)
+                        .background(Color.White.copy(alpha = 0.2f))
+                )
+            }
+            Column(
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Email",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                TextField(
+                    value = emailValue,
+                    onValueChange = { newValue ->
+                        emailValue = newValue
+                    },
+                    placeholder = {
+                        Text(
+                            text = "john.doe@example.com",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = TextFieldDefaults.colors(
+                        unfocusedTextColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = darkGray,
+                        unfocusedContainerColor = darkGray,
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Column(
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Password",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                TextField(
+                    value = passwordValue,
+                    onValueChange = { newValue ->
+                        passwordValue = newValue
+                    },
+                    placeholder = {
+                        Text(
+                            text = "Enter your password",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    },
+                    visualTransformation = PasswordVisualTransformation(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = TextFieldDefaults.colors(
+                        unfocusedTextColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = darkGray,
+                        unfocusedContainerColor = darkGray,
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                TextField(
+                    value = confirmPasswordValue,
+                    onValueChange = { newValue ->
+                        confirmPasswordValue = newValue
+                    },
+                    placeholder = {
+                        Text(
+                            text = "Confirm your password",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    },
+                    visualTransformation = PasswordVisualTransformation(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = TextFieldDefaults.colors(
+                        unfocusedTextColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        focusedContainerColor = darkGray,
+                        unfocusedContainerColor = darkGray,
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+            }
+
+            Spacer(modifier = Modifier.height(25.dp))
+
+            Button(
+                onClick = {
+                    authManager.signUpWithEmail(emailValue, passwordValue)
+                        .onEach { result ->
+                            if (result is AuthResponse.Success) {
+                                Log.d("auth", "Email Success")
+                                onNavigateToHome()
+                            } else {
+                                Log.e("auth", "Email Failed")
+                            }
+                        }
+                        .launchIn(coroutineScope)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Sign up",
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(25.dp))
+
+            TextButton(
+                onClick = {
+                    onNavigateToLogin()
+                }
+
+            ) {
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(
+                            style = SpanStyle(
+                                fontWeight = FontWeight.Light,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        ) {
+                            append("Already have an account? ")
+                        }
+                        withStyle(
+                            style = SpanStyle(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        ) {
+                            append("Log in")
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoogleSignInButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_google),
+            contentDescription = "Google Logo",
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Text(
+            text = "Sign In With Google",
+            color = Color.White,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+private fun GoogleLoginButton(onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.ic_google),
+            contentDescription = "Google Logo",
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Text(
+            text = "Log In with Google",
+            color = Color.White,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+fun LoginScreen(
+    onNavigateToRegister: () -> Unit = {},
+    onNavigateToHome: () -> Unit = {}
+) {
+    var emailValue by remember {
+        mutableStateOf("")
+    }
+    var passwordValue by remember {
+        mutableStateOf("")
+    }
+
+    val context = LocalContext.current
+    val authManager = remember {
+        AuthManager(context)
+    }
+    val coroutineScope = rememberCoroutineScope()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(black),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Gradient()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+                .padding(top = 110.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            LoginHeader()
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            GoogleLoginButton(
+                onClick = {
+                    authManager.signInWithGoogle()
+                        .onEach { result ->
+                            if (result is AuthResponse.Success) {
+                                Log.d("auth", "Google Login Success")
+                                onNavigateToHome()
+                            } else {
+                                Log.e("auth", "Google Login Failed")
                             }
                         }
                         .launchIn(coroutineScope)
@@ -229,12 +548,13 @@ fun RegisterScreen(){
 
             Button(
                 onClick = {
-                    authManager.signUpWithEmail(emailValue, passwordValue)
+                    authManager.signInWithEmail(emailValue, passwordValue)
                         .onEach { result ->
                             if (result is AuthResponse.Success) {
-                                Log.d("auth", "Email Success")
+                                Log.d("auth", "Email Login Success")
+                                onNavigateToHome()
                             } else {
-                                Log.e("auth", "Email Failed")
+                                Log.e("auth", "Email Login Failed")
                             }
                         }
                         .launchIn(coroutineScope)
@@ -246,7 +566,7 @@ fun RegisterScreen(){
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Sign up",
+                    text = "Log in",
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
@@ -255,7 +575,7 @@ fun RegisterScreen(){
 
             TextButton(
                 onClick = {
-
+                    onNavigateToRegister()
                 }
 
             ) {
@@ -267,7 +587,7 @@ fun RegisterScreen(){
                                 color = Color.White.copy(alpha = 0.8f)
                             )
                         ) {
-                            append("Already have an account? ")
+                            append("Don't have an account? ")
                         }
                         withStyle(
                             style = SpanStyle(
@@ -275,35 +595,12 @@ fun RegisterScreen(){
                                 color = Color.White
                             )
                         ) {
-                            append("Log in")
+                            append("Create")
                         }
                     }
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun GoogleSignInButton(onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        shape = RoundedCornerShape(10.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_google),
-            contentDescription = "Google Logo",
-            modifier = Modifier.size(24.dp)
-        )
-
-        Spacer(modifier = Modifier.width(10.dp))
-
-        Text(
-            text = "Sign In With Google",
-            color = Color.White,
-            modifier = Modifier.padding(vertical = 4.dp)
-        )
     }
 }
 
@@ -327,6 +624,26 @@ private fun RegisterHeader() {
     Spacer(modifier = Modifier.height(40.dp))
 }
 
+@Composable
+private fun LoginHeader() {
+    Text(
+        text = "Welcome Back",
+        style = MaterialTheme.typography.titleLarge,
+        color = Color.White,
+        fontWeight = FontWeight.Bold
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Text(
+        text = "Sign in to continue to your account",
+        style = MaterialTheme.typography.bodyMedium,
+        color = Color.White
+    )
+
+    Spacer(modifier = Modifier.height(40.dp))
+}
+
 @Preview
 @Composable
 private fun RegisterPreview(){
@@ -335,6 +652,101 @@ private fun RegisterPreview(){
     }
 }
 
+@Preview
+@Composable
+private fun LoginPreview(){
+    SupabaseAuthCourseTheme {
+        LoginScreen()
+    }
+}
+
+@Preview
+@Composable
+private fun HomePreview(){
+    SupabaseAuthCourseTheme {
+        HomeScreen()
+    }
+}
+
+
+@Composable
+fun HomeScreen() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(black),
+        contentAlignment = Alignment.Center
+    ) {
+        Gradient()
+        
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp)
+                .padding(top = 110.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(80.dp))
+            
+            Text(
+                text = "Welcome!",
+                style = MaterialTheme.typography.displayMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "You've successfully signed in",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+            
+            Spacer(modifier = Modifier.height(60.dp))
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .background(
+                        color = darkGray,
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "✓",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = purple,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        text = "Authentication Successful",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Your account is ready to use",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun Gradient(){
@@ -408,7 +820,7 @@ class AuthManager(
     fun loginGoogleUser(): Flow<AuthResponse> = flow {
         val hashedOnce = createNonce()
 
-        val googleIdOption = GetGoogleIdOption.Builder()
+        val googleIdOption   = GetGoogleIdOption.Builder()
             .setServerClientId(BuildConfig.WEB_CLIENT_ID)
             .setNonce(hashedOnce)
             .setAutoSelectEnabled(false)
@@ -441,6 +853,46 @@ class AuthManager(
 
         }catch (e: Exception){
             Log.e("Google", e.localizedMessage)
+            emit(AuthResponse.Error(e.localizedMessage))
+        }
+    }
+
+    fun signInWithGoogle(): Flow<AuthResponse> = flow {
+        val hashedOnce = createNonce()
+
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setServerClientId(BuildConfig.WEB_CLIENT_ID)
+            .setNonce(hashedOnce)
+            .setAutoSelectEnabled(false)
+            .setFilterByAuthorizedAccounts(true) // Filter to show only previously authorized accounts for login
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        val credentialManager = CredentialManager.create(context)
+
+        try {
+            val result = credentialManager.getCredential(
+                context = context,
+                request = request
+            )
+
+            val googleIdTokenCredential = GoogleIdTokenCredential
+                .createFrom(result.credential.data)
+
+            val googleIdToken = googleIdTokenCredential.idToken
+
+            supabase.auth.signInWith(IDToken){
+                idToken = googleIdToken
+                provider = Google
+            }
+
+            emit(AuthResponse.Success)
+
+        }catch (e: Exception){
+            Log.e("Google Login", e.localizedMessage)
             emit(AuthResponse.Error(e.localizedMessage))
         }
     }
